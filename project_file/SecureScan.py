@@ -40,19 +40,28 @@ def scan():
     logging.info(f"full_fill_col: {full_fill_col}")
     logging.info(f"scan_match_col: {scan_match_col}")
     logging.info(f"scan_fill_col: {scan_fill_col}")
-    full_match_col_list = [int(x) for x in full_match_col.split(",")]
-    scan_match_col_list = [int(x) for x in scan_match_col.split(",")]
+    if "," in str(full_match_col) and "," in str(scan_match_col):
+        full_match_col_list = [int(x) for x in full_match_col.split(",")]
+        scan_match_col_list = [int(x) for x in scan_match_col.split(",")]
+    else:
+        full_match_col_list = [full_match_col]
+        scan_match_col_list = [scan_match_col]
     full_match_col_list_len = len(full_match_col_list)
     scan_match_col_list_len = len(scan_match_col_list)
-    full_fill_col_list = [int(x) for x in full_fill_col.split(",")]
-    scan_fill_col_list = [int(x) for x in scan_fill_col.split(",")]
+
+    if "," in str(full_fill_col) and "," in str(scan_fill_col):
+        full_fill_col_list = [int(x) for x in full_fill_col.split(",")]
+        scan_fill_col_list = [int(x) for x in scan_fill_col.split(",")]
+    else:
+        full_fill_col_list = [full_fill_col]
+        scan_fill_col_list = [scan_fill_col]
     full_fill_col_list_len = len(full_fill_col_list)
     scan_fill_col_list_len = len(scan_fill_col_list)
     if scan_match_col_list_len != full_match_col_list_len:
         logging.error("匹配数据个数不一致，请重新填写conf.xlsx文件")
 
     # 字典存储全集被扫描的空值
-    full_list = []
+    full_dic = {}
 
     # 获取逐行读取填到字典中，然后比对
     # 如果最大行配置为0， 则获取最大行， 否则获取配置值
@@ -66,11 +75,9 @@ def scan():
     if full_start_row >= full_xml_max_row:
         logging.error("全集文件最大行配置错误，请重新配置！")
     for n in range(full_start_row, full_xml_max_row + 1):
-        full_list_ele = []
         for i in range(0, full_match_col_list_len):
-            full_list_ele.append(full_xml.cell(n, full_match_col_list[i]).value)
-        full_list.append(full_list_ele.copy())
-    logging.debug(full_list)
+            full_dic.setdefault(full_xml.cell(n, full_match_col_list[i]).value, n)
+    logging.debug(full_dic)
 
     # 字典存储需要扫描的列初始化空值
     
@@ -87,13 +94,12 @@ def scan():
     if scan_start_row >= scan_xml_max_row:
         logging.error("扫描文件最大行配置错误，请重新配置！")
     for n in range(scan_start_row, scan_xml_max_row + 1):
-        scan_list = []
         for i in range(0, scan_match_col_list_len):
-            scan_list.append(scan_xml.cell(n, scan_match_col_list[i]).value)
-            logging.debug(scan_list)
-            if scan_list in full_list:
+            scan_value = scan_xml.cell(n, scan_match_col_list[i]).value
+            logging.debug(scan_value)
+            if scan_value in full_dic.keys():
                 for j in range(0, scan_fill_col_list_len):
-                    scan_xml.cell(n, scan_fill_col_list[j]).value = full_xml.cell(n, full_fill_col_list[j]).value
+                    scan_xml.cell(n, scan_fill_col_list[j]).value = full_xml.cell(full_dic.get(scan_value), full_fill_col_list[j]).value
     scan_xlsx.save(f"{conf_xml.cell(2, 2).value}")
     return
 
